@@ -23,22 +23,40 @@ class AutoEncoder:
                    network_structure_list,
                    standard_deviation,
                    initial_bias):
+        """
+        Builds the autoencoder network.
+        The structue of the network is defined in the network_structure_list.
+
+        The network_structure_list should have the following structue:
+
+        network_structure_list = [
+                                  input_size,
+                                  first_hidden_layer_size,
+                                  second_hidden_layer_size,
+                                  ...
+                                  output_size
+                                  ]
+
+        :param network_structure_list:
+        :param standard_deviation:
+        :param initial_bias:
+        :return:
+        """
 
         self.network_input = tf.placeholder(TF_LOCAL_DTYPE,
-                                            shape=[None, network_structure_list[0][0]],
+                                            shape=[None, network_structure_list[0]],
                                             name="network_input")
 
         current_layer = self.network_input
         print("Input layer shape %15s" % (str(current_layer.get_shape())))
 
-
         print("len(network_structure_list): " + str(len(network_structure_list)))
         for i in range(1, len(network_structure_list)-1):
             print("i: " + str(i))
-            w_connected = weight_variable(network_structure_list[i], standard_deviation)
+            w_connected = weight_variable([network_structure_list[i-1], network_structure_list[i]], standard_deviation)
             print("w_connected %5s shape %15s" % (str(i), str(w_connected.get_shape())))
 
-            b_connected = bias_variable([network_structure_list[i][1]], initial_bias)
+            b_connected = bias_variable([network_structure_list[i]], initial_bias)
             print("b_connected %5s shape %15s" % (str(i), str(b_connected.get_shape())))
 
             mm = tf.matmul(current_layer, w_connected)
@@ -47,14 +65,14 @@ class AutoEncoder:
             print("Layer %5s shape %15s" % (str(i), str(connected_layer.get_shape())))
             current_layer = connected_layer
 
-        w_connected = weight_variable(network_structure_list[-1], standard_deviation)
-        b_connected = bias_variable([network_structure_list[-1][1]], initial_bias)
+        w_connected = weight_variable([network_structure_list[-2], network_structure_list[-1]], standard_deviation)
+        b_connected = bias_variable([network_structure_list[-1]], initial_bias)
 
         self.network_output = tf.matmul(current_layer, w_connected) + b_connected
         print("Network output shape %15s" % (str(self.network_output.get_shape())))
 
         self.network_expected_output = tf.placeholder(TF_LOCAL_DTYPE,
-                                                      shape=[None, network_structure_list[-1][1]],
+                                                      shape=[None, network_structure_list[-1]],
                                                       name="network_expected_output")
         print("Network expected output shape %15s" % (str(self.network_expected_output.get_shape())))
 
@@ -66,8 +84,6 @@ class AutoEncoder:
                  network_structure_list,
                  standard_deviation,
                  initial_bias):
-
-
 
         self.width = width
         self.height = height
@@ -84,6 +100,13 @@ class AutoEncoder:
 
 
     def setup_loss(self, mini_batch_size):
+        """
+        To train the autoencoder we use the least squares like loss function.
+
+        :param mini_batch_size:
+        :return:
+        """
+
 
         self.mini_batch_size = mini_batch_size
 
@@ -94,6 +117,15 @@ class AutoEncoder:
 
 
     def setup_minimize(self, initial_learning_rate, decay_steps, decay_rate):
+        """
+        The the minimization algorithm.
+        Usa a decaying learning rate.
+
+        :param initial_learning_rate:
+        :param decay_steps:
+        :param decay_rate:
+        :return:
+        """
 
         self.global_step = tf.Variable(0, trainable=False)
         self.decaying_learning_rate = tf.train.exponential_decay(initial_learning_rate,
@@ -120,7 +152,7 @@ class AutoEncoder:
 
 
     def train(self,
-              x_train,
+              data,
               n_epochs,
               mini_batch_size,
               initial_learning_rate,
@@ -131,7 +163,7 @@ class AutoEncoder:
         self.setup_minimize(initial_learning_rate, decay_steps, decay_rate)
         self.setup_session()
 
-        n_batches_per_epoch = round(len(x_train) / mini_batch_size)
+        n_batches_per_epoch = round(len(data) / mini_batch_size)
 
         print("Number of mini batches: " + str(n_batches_per_epoch))
         print("decaying_learning_rate: " + str(self.decaying_learning_rate.eval(session=self.sess)))
@@ -141,7 +173,7 @@ class AutoEncoder:
             train_loss = 0.0
             for batch in range(n_batches_per_epoch):
                 #start = time.time()
-                mini_batch = x_train[ptr:ptr + mini_batch_size]
+                mini_batch = data[ptr:ptr + mini_batch_size]
                 ptr = ptr + mini_batch_size
 
 
@@ -159,7 +191,7 @@ class AutoEncoder:
                 #stop = time.time()
                 #print("Mini batch time: " + str(stop - start))
 
-            images, _ = dh.split_labels_images(x_train)
+            images, _ = dh.split_labels_images(data)
             self.set_parameter_dict_for_train(images)
             c_val_train = (self.C).eval(session=self.sess, feed_dict=self.parameter_dict)
 
