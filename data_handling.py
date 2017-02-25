@@ -1,12 +1,24 @@
 import csv
+import time
 
 import numpy as np
+import matplotlib.pyplot as plt
+
+MNIST_WIDTH = 28 # MNIST image dimension - width
+MNIST_HEIGHT = 28 # MNIST image dimension = height
 
 def read_data(file_name):
     """
+    Read data from a csv file.
+    We are using the data sets from Kaggle.
+    See:
+    - https://www.kaggle.com/c/digit-recognizer/data
+    Files:
+    - train.csv
+    - test.csv
 
     :param file_name:
-    :return:
+    :return data: A numpy array without the first row (labels).
     """
     with open(file_name, "r") as f:
         r = csv.reader(f)
@@ -16,19 +28,51 @@ def read_data(file_name):
 
 
 def split_labels_images(data):
+    """
+    The data is assumed to be a N x M array. The first column is the label.
+    The rest of the row is a MNIST image.
 
+    The function splits the data into two lists : label_list and image_list.
+    The i-th entry in labels_list contains the label that corresponds
+    to the i-th image in image_list.
+
+    :param data:
+    :return image_list, label_list:
+    """
     labels = data[:,0]
-    images_as_array = data[:,1:]
+    images_as_array = data[:,1:] / 255.0
 
     n_img = len(labels)
-    label_list = [None for i in range(n_img)]
-    image_list = [None for i in range(n_img)]
-
-    for i in range(n_img):
-        label_list[i] = labels[i]
-        image_list[i] = images_as_array[i]/255.0
+    label_list = [labels[i] for i in range(n_img)]
+    image_list = [images_as_array[i] for i in range(n_img)]
 
     return image_list, label_list
+
+
+def print_verbose(text, verbosity_level):
+    if verbosity_level == 1:
+        print(text)
+    else:
+        pass
+
+
+def print_image(autoencoder_input, autoencoder_output):
+    N = len(autoencoder_input)
+
+    for i in range(N):
+        ax = plt.subplot(2, N, i + 1)
+        plt.imshow(autoencoder_input[i].reshape(MNIST_WIDTH, MNIST_HEIGHT), interpolation="nearest")
+        plt.gray()
+        plt.colorbar()
+
+        ax = plt.subplot(2, N, i + 1 + N)
+        plt.imshow(autoencoder_output[i].reshape(MNIST_WIDTH, MNIST_HEIGHT), interpolation="nearest")
+        plt.gray()
+        plt.colorbar()
+
+    plt.show()
+
+
 
 
 
