@@ -5,7 +5,7 @@ import data_handling as dh
 import autoencoder as ae
 
 # Autoencoder parameters
-n_epochs = 30
+n_epochs = 60
 mini_batch_size = 256
 learning_rate = 0.001
 standard_deviation = 0.01
@@ -15,7 +15,9 @@ verbosity_level = False
 
 network_structure_list = [
                           dh.MNIST_WIDTH * dh.MNIST_HEIGHT, # Input layer size
-                          32,
+                          48,
+                          16,
+                          48,
                           dh.MNIST_WIDTH * dh.MNIST_HEIGHT # Output layer size
                          ]
 

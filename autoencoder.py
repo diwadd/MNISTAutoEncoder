@@ -204,6 +204,13 @@ class AutoEncoder:
 
         print("Number of mini batches: " + str(n_batches_per_epoch))
 
+        all_images, _ = dh.split_labels_images(data)
+
+        min_index = random.randint(0, len(all_images) - 8 - 1)
+        max_index = min_index + 8
+        self.set_parameter_dict_for_train(all_images[min_index:max_index])
+        autoencoder_before_training = (self.network_output_for_prediction).eval(session=self.sess, feed_dict=self.parameter_dict) 
+
         for epoch in range(n_epochs):
             ptr = 0
 
@@ -228,20 +235,18 @@ class AutoEncoder:
                 # stop = time.time()
                 # print("Mini batch time: " + str(stop - start))
 
-            images, _ = dh.split_labels_images(data)
-            self.set_parameter_dict_for_train(images)
+            self.set_parameter_dict_for_train(all_images)
             c_val_train = (self.C).eval(session=self.sess, feed_dict=self.parameter_dict)
 
 
-            print("(epoch %10s) C value: %10s" % (str(epoch), str(c_val_train)))
+            print("(epoch %10s) loss value: %10s" % (str(epoch), str(c_val_train)))
 
-        min_index = random.randint(0, len(images) - 8 - 1)
-        max_index = min_index + 8        
-        self.set_parameter_dict_for_train(images[min_index:max_index])
-        image_from_ae = (self.network_output_for_prediction).eval(session=self.sess, feed_dict=self.parameter_dict)
+      
+        self.set_parameter_dict_for_train(all_images[min_index:max_index])
+        autoencoder_output = (self.network_output_for_prediction).eval(session=self.sess, feed_dict=self.parameter_dict)
 
         
-        dh.print_image(images[min_index:max_index], image_from_ae)
+        dh.print_image(all_images[min_index:max_index], autoencoder_before_training, autoencoder_output)
 
 
 

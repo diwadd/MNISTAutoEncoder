@@ -56,16 +56,22 @@ def print_verbose(text, verbosity_level):
         pass
 
 
-def print_image(autoencoder_input, autoencoder_output):
+def print_image(autoencoder_input, autoencoder_before_training, autoencoder_output):
     N = len(autoencoder_input)
+    rows = 3
 
     for i in range(N):
-        ax = plt.subplot(2, N, i + 1)
+        ax = plt.subplot(rows, N, i + 1)
         plt.imshow(autoencoder_input[i].reshape(MNIST_WIDTH, MNIST_HEIGHT), interpolation="nearest")
         plt.gray()
         plt.colorbar()
 
-        ax = plt.subplot(2, N, i + 1 + N)
+        ax = plt.subplot(rows, N, i + 1 + N)
+        plt.imshow(autoencoder_before_training[i].reshape(MNIST_WIDTH, MNIST_HEIGHT), interpolation="nearest")
+        plt.gray()
+        plt.colorbar()
+
+        ax = plt.subplot(rows, N, i + 1 + 2*N)
         plt.imshow(autoencoder_output[i].reshape(MNIST_WIDTH, MNIST_HEIGHT), interpolation="nearest")
         plt.gray()
         plt.colorbar()
