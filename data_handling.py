@@ -57,6 +57,7 @@ def print_verbose(text, verbosity_level):
 
 
 def print_image(autoencoder_input, autoencoder_before_training, autoencoder_output):
+
     N = len(autoencoder_input)
     rows = 3
 

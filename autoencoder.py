@@ -155,9 +155,9 @@ class AutoEncoder:
 
         if self.loss == "L2":
             t = tf.subtract(self.network_output, self.network_expected_output)
-            self.C = tf.nn.l2_loss(t)
+            self.c_loss = tf.nn.l2_loss(t)
         elif self.loss == "SCE":
-            self.C = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=self.network_expected_output,
+            self.c_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=self.network_expected_output,
                                                                             logits=self.network_output))
         else:
             pass
@@ -173,7 +173,7 @@ class AutoEncoder:
         :return:
         """
 
-        self.train_step = tf.train.AdamOptimizer(learning_rate).minimize(self.C)
+        self.train_step = tf.train.AdamOptimizer(learning_rate).minimize(self.c_loss)
 
 
     def setup_session(self):
@@ -183,7 +183,7 @@ class AutoEncoder:
         self.sess.run(init)
 
 
-    def set_parameter_dict_for_train(self, images):
+    def set_parameter_dict_for_evaluation(self, images):
 
         self.parameter_dict = {self.network_input: images,
                                self.network_expected_output: images}
@@ -191,7 +191,8 @@ class AutoEncoder:
 
 
     def train(self,
-              data,
+              training_data,
+              validation_data,
               n_epochs,
               mini_batch_size,
               learning_rate):
@@ -200,16 +201,23 @@ class AutoEncoder:
         self.setup_minimize(learning_rate)
         self.setup_session()
 
-        n_batches_per_epoch = round(len(data) / mini_batch_size)
+        n_batches_per_epoch = round(len(training_data) / mini_batch_size)
 
         print("Number of mini batches: " + str(n_batches_per_epoch))
 
-        all_images, _ = dh.split_labels_images(data)
+        all_training_images, _ = dh.split_labels_images(training_data)
+        all_validation_images, _ = dh.split_labels_images(validation_data)
 
-        min_index = random.randint(0, len(all_images) - 8 - 1)
-        max_index = min_index + 8
-        self.set_parameter_dict_for_train(all_images[min_index:max_index])
-        autoencoder_before_training = (self.network_output_for_prediction).eval(session=self.sess, feed_dict=self.parameter_dict) 
+        min_index = 0
+        max_index = 8
+
+        # Get the autoencoder output before training for training data (a few example images).
+        self.set_parameter_dict_for_evaluation(all_training_images[min_index:max_index])
+        autoencoder_before_training_td = (self.network_output_for_prediction).eval(session=self.sess, feed_dict=self.parameter_dict) 
+
+        # Get the autoencoder output before training for validation data (a few example images).
+        self.set_parameter_dict_for_evaluation(all_validation_images[min_index:max_index])
+        autoencoder_before_training_vd = (self.network_output_for_prediction).eval(session=self.sess, feed_dict=self.parameter_dict)
 
         for epoch in range(n_epochs):
             ptr = 0
@@ -217,7 +225,7 @@ class AutoEncoder:
             train_loss = 0.0
             for batch in range(n_batches_per_epoch):
                 # start = time.time()
-                mini_batch = data[ptr:ptr + mini_batch_size]
+                mini_batch = training_data[ptr:ptr + mini_batch_size]
                 ptr = ptr + mini_batch_size
 
 
@@ -228,25 +236,37 @@ class AutoEncoder:
                 
 
 
-                self.set_parameter_dict_for_train(images)
+                self.set_parameter_dict_for_evaluation(images)
 
                 (self.train_step).run(session=self.sess, feed_dict=self.parameter_dict)
 
                 # stop = time.time()
                 # print("Mini batch time: " + str(stop - start))
 
-            self.set_parameter_dict_for_train(all_images)
-            c_val_train = (self.C).eval(session=self.sess, feed_dict=self.parameter_dict)
+            self.set_parameter_dict_for_evaluation(all_training_images)
+            loss_value = (self.c_loss).eval(session=self.sess, feed_dict=self.parameter_dict)
 
 
-            print("(epoch %10s) loss value: %10s" % (str(epoch), str(c_val_train)))
+            print("(epoch %10s) loss value: %10s" % (str(epoch), str(loss_value)))
 
       
-        self.set_parameter_dict_for_train(all_images[min_index:max_index])
+        self.set_parameter_dict_for_evaluation(all_training_images[min_index:max_index])
         autoencoder_output = (self.network_output_for_prediction).eval(session=self.sess, feed_dict=self.parameter_dict)
 
-        
-        dh.print_image(all_images[min_index:max_index], autoencoder_before_training, autoencoder_output)
+        # Print results for training data
+        dh.print_image(all_training_images[min_index:max_index], autoencoder_before_training_td, autoencoder_output[min_index:max_index])
+
+
+        self.set_parameter_dict_for_evaluation(all_validation_images)
+
+        loss_value = (self.c_loss).eval(session=self.sess, feed_dict=self.parameter_dict)
+        autoencoder_output = (self.network_output_for_prediction).eval(session=self.sess, feed_dict=self.parameter_dict)
+        print("loss for validation data: " + str(loss_value))
+
+        # Print results for validation data
+        dh.print_image(all_validation_images[min_index:max_index], autoencoder_before_training_vd, autoencoder_output[min_index:max_index])
+
+
 
 
 

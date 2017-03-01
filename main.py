@@ -1,11 +1,12 @@
 import csv
 import sys
+import random
 
 import data_handling as dh
 import autoencoder as ae
 
 # Autoencoder parameters
-n_epochs = 60
+n_epochs = 20
 mini_batch_size = 256
 learning_rate = 0.001
 standard_deviation = 0.01
@@ -15,18 +16,23 @@ verbosity_level = False
 
 network_structure_list = [
                           dh.MNIST_WIDTH * dh.MNIST_HEIGHT, # Input layer size
-                          48,
-                          16,
-                          48,
+                          32,
                           dh.MNIST_WIDTH * dh.MNIST_HEIGHT # Output layer size
                          ]
 
 # Read input data
 file_name = sys.argv[1]
 data = dh.read_data(file_name)
-image_list, label_list = dh.split_labels_images(data)
+random.shuffle(data)
 
-print("Number of images: " + str(len(data)))
+N = len(data)
+nvd = int(0.1*N)
+print("Number of images: " + str(N))
+print("Number of validation images: " + str(nvd))
+print("Number of training data: " + str(N - nvd))
+
+training_data = data[nvd:]
+validation_data = data[0:nvd]
 
 # Setup the network
 ae_one = ae.AutoEncoder(dh.MNIST_WIDTH,
@@ -38,7 +44,8 @@ ae_one = ae.AutoEncoder(dh.MNIST_WIDTH,
                         verbosity_level)
 
 # Train the network.
-ae_one.train(data,
+ae_one.train(training_data,
+             validation_data,
              n_epochs,
              mini_batch_size,
              learning_rate)
